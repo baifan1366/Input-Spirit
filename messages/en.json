@@ -1,0 +1,119 @@
+{
+  "update": {
+    "available": "New version detected, downloading",
+    "downloaded": "Update downloaded, will take effect after restart",
+    "error": "Error checking for updates"
+  },
+  "home": {
+    "title": "Input Spirit",
+    "subtitle": "Global AI assistant powered by Chrome Built-in AI APIs (Gemini Nano)",
+    "features": "Features",
+    "featureList": {
+      "prompt": "Prompt API - Dynamic AI responses with multimodal support",
+      "proofreader": "Proofreader API - Grammar correction",
+      "summarizer": "Summarizer API - Text summarization",
+      "translator": "Translator API - Multi-language translation",
+      "writer": "Writer API - Content generation",
+      "rewriter": "Rewriter API - Content improvement"
+    },
+    "getStarted": "Get Started",
+    "learnMore": "Learn More"
+  },
+  "overlay": {
+    "title": "Input Spirit",
+    "inputLabel": "Enter your command:",
+    "inputPlaceholder": "ai: write a poem about coding\nfix: your text here\ntranslate: en->zh Hello",
+    "submitHint": "Ctrl+Enter to submit • Esc to close",
+    "plugin": "Plugin:",
+    "processing": "Processing...",
+    "execute": "Execute",
+    "result": "Result:",
+    "error": "Error:",
+    "actions": {
+      "copy": "Copy",
+      "insert": "Insert",
+      "regenerate": "Regenerate",
+      "edit": "Edit"
+    },
+    "metadata": {
+      "processingTime": "ms",
+      "model": "Model:"
+    },
+    "tips": {
+      "label": "💡 Tips:",
+      "text": "Try commands like",
+      "examples": {
+        "ai": "ai: your question",
+        "fix": "fix: your text",
+        "translate": "translate: en->zh text"
+      }
+    }
+  },
+  "auth": {
+    "signIn": "Sign In",
+    "signUp": "Sign Up",
+    "email": "Email",
+    "password": "Password",
+    "displayName": "Display Name",
+    "welcomeBack": "Welcome back!",
+    "createAccount": "Create your account",
+    "processing": "Processing...",
+    "orContinueWith": "Or continue with",
+    "google": "Google",
+    "github": "GitHub",
+    "noAccount": "Don't have an account? Sign up",
+    "hasAccount": "Already have an account? Sign in",
+    "signOut": "Sign Out",
+    "profile": "Profile",
+    "notConfigured": "Supabase Not Configured",
+    "notConfiguredDesc": "Cloud sync is not available. Please configure Supabase credentials in your environment variables.",
+    "goHome": "Go Home",
+    "secureNote": "Your data is encrypted and secure"
+  },
+  "settings": {
+    "title": "Settings",
+    "subtitle": "Configure Input Spirit to suit your needs",
+    "quickStart": {
+      "title": "Quick Start",
+      "description": "Press {shortcut} anywhere to open the AI overlay. Then type commands like {ai} or {fix}.",
+      "shortcut": "Ctrl+Shift+Space",
+      "aiExample": "ai: your question",
+      "fixExample": "fix: your text"
+    },
+    "plugins": {
+      "title": "Plugins",
+      "subtitle": "Enable or disable AI plugins",
+      "loading": "Loading plugins...",
+      "noPlugins": "No plugins available",
+      "version": "v{version}",
+      "by": "By {author}"
+    },
+    "usage": {
+      "title": "Usage Examples",
+      "aiAssistant": {
+        "title": "AI Assistant",
+        "example": "ai: explain quantum computing in simple terms"
+      },
+      "promptEnhancer": {
+        "title": "Prompt Enhancer",
+        "example": "prompt: write a story"
+      },
+      "grammarChecker": {
+        "title": "Grammar Checker",
+        "example": "fix: I has went to the store yesterday"
+      },
+      "translator": {
+        "title": "Translator",
+        "example": "translate: en->zh Hello, how are you?"
+      },
+      "articleWriter": {
+        "title": "Article Writer",
+        "example": "write: the future of AI in web browsers"
+      }
+    },
+    "footer": {
+      "title": "Input Spirit - AI Everywhere",
+      "subtitle": "Google Chrome Built-in AI Challenge 2025"
+    }
+  }
+}

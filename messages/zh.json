@@ -1,0 +1,118 @@
+{
+  "update": {
+    "available": "检测到新版本，正在下载中",
+    "downloaded": "更新已下载完毕，重启后生效",
+    "error": "检查更新时出错"
+  },
+  "home": {
+    "title": "Input Spirit",
+    "subtitle": "基于 Chrome 内置 AI APIs (Gemini Nano) 的全局 AI 助手",
+    "features": "功能特性",
+    "featureList": {
+      "prompt": "Prompt API - 支持多模态的动态 AI 响应",
+      "proofreader": "Proofreader API - 语法纠正",
+      "summarizer": "Summarizer API - 文本摘要",
+      "translator": "Translator API - 多语言翻译",
+      "writer": "Writer API - 内容生成",
+      "rewriter": "Rewriter API - 内容改写"
+    },
+    "getStarted": "开始使用",
+    "learnMore": "了解更多"
+  },
+  "overlay": {
+    "title": "Input Spirit",
+    "inputLabel": "输入您的命令：",
+    "inputPlaceholder": "ai: 写一首关于编程的诗\nfix: 你的文本\ntranslate: en->zh Hello",
+    "submitHint": "Ctrl+Enter 提交 • Esc 关闭",
+    "plugin": "插件：",
+    "processing": "处理中...",
+    "execute": "执行",
+    "result": "结果：",
+    "error": "错误：",
+    "actions": {
+      "copy": "复制",
+      "insert": "插入",
+      "regenerate": "重新生成",
+      "edit": "编辑"
+    },
+    "metadata": {
+      "processingTime": "毫秒",
+      "model": "模型："
+    },
+    "tips": {
+      "label": "💡 提示：",
+      "text": "尝试这些命令",
+      "examples": {
+        "ai": "ai: 你的问题",
+        "fix": "fix: 你的文本",
+        "translate": "translate: en->zh 文本"
+      }
+    }
+  },
+  "auth": {
+    "signIn": "登录",
+    "signUp": "注册",
+    "email": "邮箱",
+    "password": "密码",
+    "displayName": "显示名称",
+    "welcomeBack": "欢迎回来！",
+    "createAccount": "创建您的账户",
+    "processing": "处理中...",
+    "orContinueWith": "或使用以下方式继续",
+    "google": "Google",
+    "github": "GitHub",
+    "noAccount": "没有账户？立即注册",
+    "hasAccount": "已有账户？立即登录",
+    "signOut": "退出登录",
+    "profile": "个人资料",
+    "notConfigured": "Supabase 未配置",
+    "notConfiguredDesc": "云端同步功能不可用。请在环境变量中配置 Supabase 凭据。",
+    "goHome": "返回首页",
+    "secureNote": "您的数据已加密并安全存储"
+  },
+  "settings": {
+    "title": "设置",
+    "subtitle": "配置 Input Spirit 以适应您的需求",
+    "quickStart": {
+      "title": "快速开始",
+      "shortcut": "Ctrl+Shift+Space",
+      "aiExample": "ai: 你的问题",
+      "fixExample": "fix: 你的文本"
+    },
+    "plugins": {
+      "title": "插件",
+      "subtitle": "启用或禁用 AI 插件",
+      "loading": "加载插件中...",
+      "noPlugins": "没有可用的插件",
+      "version": "v{version}",
+      "by": "作者：{author}"
+    },
+    "usage": {
+      "title": "使用示例",
+      "aiAssistant": {
+        "title": "AI 助手",
+        "example": "ai: 用简单的语言解释量子计算"
+      },
+      "promptEnhancer": {
+        "title": "提示词优化器",
+        "example": "prompt: 写一个故事"
+      },
+      "grammarChecker": {
+        "title": "语法检查器",
+        "example": "fix: 我昨天去了商店"
+      },
+      "translator": {
+        "title": "翻译器",
+        "example": "translate: zh->en 你好，最近怎么样？"
+      },
+      "articleWriter": {
+        "title": "文章生成器",
+        "example": "write: AI 在网页浏览器中的未来"
+      }
+    },
+    "footer": {
+      "title": "Input Spirit - AI 无处不在",
+      "subtitle": "Google Chrome 内置 AI 挑战赛 2025"
+    }
+  }
+}
