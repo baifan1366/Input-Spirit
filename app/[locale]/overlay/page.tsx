@@ -1,9 +1,10 @@
 'use client';
 
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Loader2, Copy, Send, RotateCw, X, Sparkles } from 'lucide-react';
+import { Loader2, Copy, Check, RotateCw, X, Sparkles } from 'lucide-react';
 import { useTranslations } from 'next-intl';
+import { ChromeAIClient } from '@/app/lib/chromeAI';
 
 interface PluginResult {
   content: string;
@@ -18,6 +19,7 @@ interface PluginResult {
 
 interface ExecutionState {
   plugin?: string;
+  triggerText?: string;
   result?: PluginResult;
   error?: string;
   loading: boolean;
@@ -25,92 +27,206 @@ interface ExecutionState {
 
 export default function OverlayPage() {
   const t = useTranslations('overlay');
-  const [input, setInput] = useState('');
   const [execution, setExecution] = useState<ExecutionState>({ loading: false });
   const [visible, setVisible] = useState(false);
-  const inputRef = useRef<HTMLTextAreaElement>(null);
+
+  /**
+   * Execute AI - auto-detect environment (Chrome Launcher or Bridge)
+   */
+  const executeAI = async (plugin: string, input: string) => {
+    const startTime = Date.now();
+
+    try {
+      // Extract query from input
+      const query = input.match(/^[a-z]+:\s*(.+)/i)?.[1] || input;
+      
+      // Determine system prompt based on plugin
+      let systemPrompt = 'You are a helpful AI assistant. Provide clear, concise, and accurate answers.';
+      if (plugin === 'grammar-checker') {
+        systemPrompt = 'You are a grammar checker. Fix grammar and spelling errors while preserving the original meaning.';
+      } else if (plugin === 'translator') {
+        systemPrompt = 'You are a translator. Translate the text accurately while preserving tone and context.';
+      } else if (plugin === 'article-writer') {
+        systemPrompt = 'You are a professional article writer. Create well-structured, engaging content.';
+      } else if (plugin === 'prompt-enhancer') {
+        systemPrompt = 'You are a prompt enhancer. Improve and expand prompts to be more effective.';
+      }
+      
+      // Check if Chrome AI is available directly (Chrome Launcher mode)
+      const directAI = await ChromeAIClient.isAvailable();
+      
+      if (directAI) {
+        // Use Chrome AI directly (running in real Chrome)
+        console.log(`🚀 Executing AI directly in Chrome (plugin: ${plugin})`);
+        
+        const client = new ChromeAIClient();
+        await client.createSession({ systemPrompt, temperature: 0.7 });
+        const response = await client.prompt(query);
+        client.destroy();
+        
+        const processingTime = Date.now() - startTime;
+        
+        setExecution({
+          loading: false,
+          plugin,
+          triggerText: input,
+          result: {
+            content: response,
+            formatted: response,
+            actions: ['copy', 'insert', 'regenerate'],
+            metadata: {
+              processingTime,
+              modelUsed: 'gemini-nano (direct)',
+            },
+          },
+        });
+        
+        console.log(`✅ AI execution completed in ${processingTime}ms`);
+        return;
+      }
+      
+      // Fallback: Use Chrome AI Bridge via IPC (if in Electron)
+      if (window.electronAPI) {
+        console.log(`🚀 Executing AI via Chrome Bridge (plugin: ${plugin})`);
+        
+        const response = await window.electronAPI.invoke('execute-ai-bridge', {
+          plugin,
+          input,
+          systemPrompt,
+        });
+        
+        if (!response.success) {
+          throw new Error(response.error || 'Failed to execute AI');
+        }
+        
+        const processingTime = Date.now() - startTime;
+        
+        setExecution({
+          loading: false,
+          plugin,
+          triggerText: input,
+          result: {
+            content: response.result,
+            formatted: response.result,
+            actions: ['copy', 'insert', 'regenerate'],
+            metadata: {
+              processingTime,
+              modelUsed: 'gemini-nano (via bridge)',
+            },
+          },
+        });
+        
+        console.log(`✅ AI execution completed in ${processingTime}ms`);
+        return;
+      }
+      
+      throw new Error('No AI execution method available');
+    } catch (error) {
+      console.error('❌ AI execution error:', error);
+      
+      const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+      
+      // Check if it's a "not ready" error
+      if (errorMessage.includes('not ready')) {
+        setExecution({
+          loading: false,
+          plugin,
+          triggerText: input,
+          error: 'Chrome AI client not ready. Please open it from the tray menu (🤖 Open Chrome AI Client)',
+        });
+        return;
+      }
+      
+      // Generic error
+      setExecution({
+        loading: false,
+        plugin,
+        triggerText: input,
+        error: errorMessage,
+      });
+    }
+  };
 
   useEffect(() => {
     // Listen for overlay events from main process
     if (typeof window !== 'undefined' && window.electronAPI) {
       window.electronAPI.on('overlay-shown', () => {
+        console.log('🔍 [DEBUG] Overlay shown event received');
         setVisible(true);
-        // Only clear if not already executing
-        if (!execution.loading) {
-          setInput('');
-          setExecution({ loading: false });
-        }
-        setTimeout(() => inputRef.current?.focus(), 100);
       });
 
-      window.electronAPI.on('execution-start', (data: any) => {
+      window.electronAPI.on('execution-start', async (data: any) => {
+        console.log('🔍 [DEBUG] Execution start:', data);
         setVisible(true); // Make sure overlay is visible
-        // If input was provided (auto-trigger), show it
-        if (data.input) {
-          setInput(data.input);
-        }
-        setExecution({ loading: true, plugin: data.plugin });
-      });
+        setExecution({ 
+          loading: true, 
+          plugin: data.plugin,
+          triggerText: data.input 
+        });
 
-      window.electronAPI.on('execution-complete', (data: any) => {
-        setExecution({ loading: false, plugin: data.plugin, result: data.result });
-      });
-
-      window.electronAPI.on('execution-error', (data: any) => {
-        setExecution({ loading: false, plugin: data.plugin, error: data.error });
+        // Execute AI in browser (rendering process)
+        await executeAI(data.plugin, data.input);
       });
     }
-  }, [execution.loading]);
+  }, [execution.triggerText]);
 
-  const handleSubmit = async (e?: React.FormEvent) => {
-    e?.preventDefault();
-    if (!input.trim() || execution.loading) return;
-
-    setExecution({ loading: true });
-
-    // Send input to main process for processing
-    if (window.electronAPI) {
-      window.electronAPI.send('process-input', input);
-    }
-  };
-
-  const handleAction = async (action: string) => {
+  const handleInsert = async () => {
     if (!execution.result) return;
 
     const content = execution.result.content;
+    console.log('🔍 [DEBUG] Inserting text:', content);
 
-    switch (action) {
-      case 'copy':
-        await navigator.clipboard.writeText(content);
-        // Show toast notification
-        break;
-      
-      case 'insert':
-        // In a real implementation, this would insert into the active window
-        await navigator.clipboard.writeText(content);
+    // Send insert request to main process
+    if (window.electronAPI) {
+      const result = await window.electronAPI.invoke('insert-text', content);
+      if (result.success) {
+        console.log('✅ Text inserted successfully');
         handleClose();
-        break;
-      
-      case 'regenerate':
-        handleSubmit();
-        break;
+      } else {
+        console.error('❌ Failed to insert text:', result.error);
+      }
+    }
+  };
+
+  const handleCopy = async () => {
+    if (!execution.result) return;
+    await navigator.clipboard.writeText(execution.result.content);
+    console.log('✅ Text copied to clipboard');
+  };
+
+  const handleRegenerate = () => {
+    if (!execution.triggerText) return;
+    console.log('🔍 [DEBUG] Regenerating with:', execution.triggerText);
+    
+    setExecution({ loading: true, triggerText: execution.triggerText });
+    
+    // Send to main process for re-execution
+    if (window.electronAPI) {
+      window.electronAPI.send('process-input', execution.triggerText);
     }
   };
 
   const handleClose = () => {
+    console.log('🔍 [DEBUG] Closing overlay');
     if (window.electronAPI) {
       window.electronAPI.send('hide-overlay');
     }
     setVisible(false);
   };
 
-  const handleKeyDown = (e: React.KeyboardEvent) => {
-    if (e.key === 'Escape') {
-      handleClose();
-    } else if (e.key === 'Enter' && e.ctrlKey) {
-      handleSubmit();
+  // Handle ESC key to close
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') {
+        handleClose();
+      }
+    };
+    
+    if (visible) {
+      window.addEventListener('keydown', handleKeyDown);
+      return () => window.removeEventListener('keydown', handleKeyDown);
     }
-  };
+  }, [visible]);
 
   return (
     <div className="min-h-screen flex items-center justify-center p-4 bg-transparent">
@@ -125,9 +241,14 @@ export default function OverlayPage() {
           >
             {/* Header */}
             <div className="flex items-center justify-between px-6 py-4 bg-gradient-to-r from-blue-500 to-purple-600">
-              <div className="flex items-center gap-2 text-white">
+              <div className="flex items-center gap-3 text-white">
                 <Sparkles className="w-5 h-5" />
-                <h2 className="font-semibold text-lg">{t('title')}</h2>
+                <div>
+                  <h2 className="font-semibold text-lg">AI Response</h2>
+                  {execution.triggerText && (
+                    <p className="text-xs text-white/80">Trigger: {execution.triggerText}</p>
+                  )}
+                </div>
               </div>
               <button
                 onClick={handleClose}
@@ -137,128 +258,106 @@ export default function OverlayPage() {
               </button>
             </div>
 
-            {/* Input Area */}
+            {/* Content Area */}
             <div className="p-6 space-y-4">
-              <form onSubmit={handleSubmit}>
-                <div className="space-y-2">
-                  <label className="text-sm font-medium text-gray-700 dark:text-gray-300">
-                    {t('inputLabel')}
-                  </label>
-                  <textarea
-                    ref={inputRef}
-                    value={input}
-                    onChange={(e) => setInput(e.target.value)}
-                    onKeyDown={handleKeyDown}
-                    placeholder={t('inputPlaceholder')}
-                    className="w-full h-24 px-4 py-3 rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 placeholder-gray-400 dark:placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-blue-500 resize-none"
-                    disabled={execution.loading}
-                  />
-                  <div className="flex items-center justify-between text-xs text-gray-500 dark:text-gray-400">
-                    <span>{t('submitHint')}</span>
-                    {execution.plugin && (
-                      <span className="text-blue-600 dark:text-blue-400">
-                        {t('plugin')} {execution.plugin}
-                      </span>
-                    )}
-                  </div>
-                </div>
 
-                <button
-                  type="submit"
-                  disabled={!input.trim() || execution.loading}
-                  className="mt-4 w-full py-3 px-4 bg-gradient-to-r from-blue-500 to-purple-600 text-white font-medium rounded-lg hover:from-blue-600 hover:to-purple-700 disabled:opacity-50 disabled:cursor-not-allowed transition-all flex items-center justify-center gap-2"
+              {/* Loading State */}
+              {execution.loading && (
+                <motion.div
+                  initial={{ opacity: 0 }}
+                  animate={{ opacity: 1 }}
+                  className="flex flex-col items-center justify-center py-12 gap-4"
                 >
-                  {execution.loading ? (
-                    <>
-                      <Loader2 className="w-5 h-5 animate-spin" />
-                      {t('processing')}
-                    </>
-                  ) : (
-                    <>
-                      <Send className="w-5 h-5" />
-                      {t('execute')}
-                    </>
+                  <Loader2 className="w-12 h-12 animate-spin text-blue-500" />
+                  <p className="text-gray-600 dark:text-gray-400">Processing with AI...</p>
+                  {execution.plugin && (
+                    <p className="text-sm text-gray-500">Plugin: {execution.plugin}</p>
                   )}
-                </button>
-              </form>
+                </motion.div>
+              )}
 
-              {/* Result Area */}
+              {/* Result Display */}
               <AnimatePresence mode="wait">
-                {execution.result && (
+                {execution.result && !execution.loading && (
                   <motion.div
                     initial={{ opacity: 0, y: 10 }}
                     animate={{ opacity: 1, y: 0 }}
                     exit={{ opacity: 0, y: 10 }}
-                    className="mt-6 space-y-4"
+                    className="space-y-4"
                   >
-                    <div className="border-t border-gray-200 dark:border-gray-700 pt-4">
-                      <h3 className="text-sm font-semibold text-gray-700 dark:text-gray-300 mb-3">
-                        {t('result')}
-                      </h3>
-                      <div className="bg-gray-50 dark:bg-gray-800 rounded-lg p-4 max-h-64 overflow-y-auto">
-                        <pre className="text-sm text-gray-900 dark:text-gray-100 whitespace-pre-wrap font-sans">
-                          {execution.result.formatted || execution.result.content}
-                        </pre>
+                    <div className="bg-gray-50 dark:bg-gray-800 rounded-lg p-5 max-h-96 overflow-y-auto">
+                      <div className="text-base text-gray-900 dark:text-gray-100 whitespace-pre-wrap leading-relaxed">
+                        {execution.result.formatted || execution.result.content}
                       </div>
+                    </div>
 
-                      {/* Metadata */}
-                      {execution.result.metadata && (
-                        <div className="mt-2 text-xs text-gray-500 dark:text-gray-400 flex items-center gap-4">
-                          {execution.result.metadata.processingTime && (
-                            <span>⏱️ {execution.result.metadata.processingTime}{t('metadata.processingTime')}</span>
-                          )}
-                          {execution.result.metadata.modelUsed && (
-                            <span>🤖 {execution.result.metadata.modelUsed}</span>
-                          )}
-                        </div>
-                      )}
+                    {/* Metadata */}
+                    {execution.result.metadata && (
+                      <div className="flex items-center gap-4 text-xs text-gray-500 dark:text-gray-400">
+                        {execution.result.metadata.processingTime && (
+                          <span>⏱️ {execution.result.metadata.processingTime}ms</span>
+                        )}
+                        {execution.result.metadata.modelUsed && (
+                          <span>🤖 {execution.result.metadata.modelUsed}</span>
+                        )}
+                      </div>
+                    )}
 
-                      {/* Action Buttons */}
-                      {execution.result.actions && execution.result.actions.length > 0 && (
-                        <div className="mt-4 flex gap-2 flex-wrap">
-                          {execution.result.actions.map((action) => (
-                            <button
-                              key={action}
-                              onClick={() => handleAction(action)}
-                              className="px-4 py-2 bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-600 transition-colors flex items-center gap-2 text-sm"
-                            >
-                              {action === 'copy' && <Copy className="w-4 h-4" />}
-                              {action === 'insert' && <Send className="w-4 h-4" />}
-                              {action === 'regenerate' && <RotateCw className="w-4 h-4" />}
-                              {t(`actions.${action}`)}
-                            </button>
-                          ))}
-                        </div>
-                      )}
+                    {/* Action Buttons */}
+                    <div className="flex gap-3 pt-2">
+                      <button
+                        onClick={handleInsert}
+                        className="flex-1 py-3 px-4 bg-gradient-to-r from-blue-500 to-purple-600 text-white font-medium rounded-lg hover:from-blue-600 hover:to-purple-700 transition-all flex items-center justify-center gap-2"
+                      >
+                        <Check className="w-5 h-5" />
+                        Insert
+                      </button>
+                      <button
+                        onClick={handleCopy}
+                        className="py-3 px-4 bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-600 transition-colors flex items-center gap-2"
+                      >
+                        <Copy className="w-5 h-5" />
+                        Copy
+                      </button>
+                      <button
+                        onClick={handleRegenerate}
+                        className="py-3 px-4 bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-600 transition-colors flex items-center gap-2"
+                      >
+                        <RotateCw className="w-5 h-5" />
+                      </button>
                     </div>
                   </motion.div>
                 )}
 
-                {execution.error && (
+                {/* Error Display */}
+                {execution.error && !execution.loading && (
                   <motion.div
                     initial={{ opacity: 0, y: 10 }}
                     animate={{ opacity: 1, y: 0 }}
                     exit={{ opacity: 0, y: 10 }}
-                    className="mt-6 p-4 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg"
+                    className="p-4 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg"
                   >
                     <h3 className="text-sm font-semibold text-red-700 dark:text-red-400 mb-2">
-                      {t('error')}
+                      Error
                     </h3>
                     <p className="text-sm text-red-600 dark:text-red-300">
                       {execution.error}
                     </p>
+                    <button
+                      onClick={handleRegenerate}
+                      className="mt-3 text-sm text-red-600 dark:text-red-400 hover:underline"
+                    >
+                      Try again
+                    </button>
                   </motion.div>
                 )}
               </AnimatePresence>
             </div>
 
-            {/* Tips */}
-            <div className="px-6 py-4 bg-gray-50 dark:bg-gray-800 border-t border-gray-200 dark:border-gray-700">
-              <p className="text-xs text-gray-600 dark:text-gray-400">
-                <span className="font-semibold">{t('tips.label')}</span> {t('tips.text')}{' '}
-                <code className="px-1 py-0.5 bg-gray-200 dark:bg-gray-700 rounded">{t('tips.examples.ai')}</code>,{' '}
-                <code className="px-1 py-0.5 bg-gray-200 dark:bg-gray-700 rounded">{t('tips.examples.fix')}</code>,{' '}
-                <code className="px-1 py-0.5 bg-gray-200 dark:bg-gray-700 rounded">{t('tips.examples.translate')}</code>
+            {/* Footer Hint */}
+            <div className="px-6 py-3 bg-gray-50 dark:bg-gray-800 border-t border-gray-200 dark:border-gray-700">
+              <p className="text-xs text-gray-500 dark:text-gray-400 text-center">
+                Press <kbd className="px-1.5 py-0.5 bg-gray-200 dark:bg-gray-700 rounded text-xs">ESC</kbd> to close
               </p>
             </div>
           </motion.div>

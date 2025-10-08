@@ -47,11 +47,16 @@ class ChromeAIAdapter {
         // Hide the view (we only use it for AI API access)
         this.aiView.setBounds({ x: 0, y: 0, width: 0, height: 0 });
         parentWindow.addBrowserView(this.aiView);
-        // Load a minimal HTML page
-        await this.aiView.webContents.loadURL('data:text/html,<html><body></body></html>');
-        // Wait for page to be ready
-        await new Promise((resolve) => {
-            this.aiView.webContents.once('did-finish-load', () => resolve());
+        // Load a minimal HTML page and wait for it
+        await new Promise((resolve, reject) => {
+            const timeout = setTimeout(() => {
+                reject(new Error('Chrome AI view load timeout'));
+            }, 3000);
+            this.aiView.webContents.once('did-finish-load', () => {
+                clearTimeout(timeout);
+                resolve();
+            });
+            this.aiView.webContents.loadURL('data:text/html,<html><body></body></html>').catch(reject);
         });
         // Check if AI APIs are available
         const available = await this.checkAIAvailability();

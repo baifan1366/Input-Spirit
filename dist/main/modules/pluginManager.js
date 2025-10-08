@@ -85,6 +85,7 @@ class PluginManager extends events_1.EventEmitter {
             if (trigger instanceof RegExp) {
                 const match = input.match(trigger);
                 if (match) {
+                    console.log(`🎯 Matched plugin: ${plugin.metadata.name}`);
                     return {
                         pattern: trigger.source,
                         pluginName: plugin.metadata.name,
@@ -95,6 +96,7 @@ class PluginManager extends events_1.EventEmitter {
             }
             else if (typeof trigger === 'function') {
                 if (trigger(input)) {
+                    console.log(`🎯 Matched plugin: ${plugin.metadata.name}`);
                     return {
                         pattern: 'custom-function',
                         pluginName: plugin.metadata.name,

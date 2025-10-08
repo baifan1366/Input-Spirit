@@ -39,6 +39,9 @@ contextBridge.exposeInMainWorld("electronAPI", {
       "update-config",
       "get-plugins",
       "toggle-plugin",
+      "insert-text",
+      "execute-ai-bridge",
+      "open-chrome-ai-client",
     ];
     if (validChannels.includes(channel)) {
       return await ipcRenderer.invoke(channel, ...args);
